@@ -95,12 +95,12 @@ const ABOUT_CONTEXT = {
   creative: 'creative agency turning bold ideas into work that moves people',
 };
 
-function sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl }) {
+function sitePrompt({ cat, categoryKey, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors }) {
   const vibe = keywords.join(', ');
   const brand = brandName || 'Our Brand';
   const colorVars = colors.map((c, i) => `  --color-${i + 1}: ${c};`).join('\n');
-  const shop = SHOP_CONTEXT[Object.keys(SHOP_CONTEXT).find(k => cat.label.toLowerCase().includes(k.split('/')[0].trim().toLowerCase())) ] || SHOP_CONTEXT.fashion;
-  const aboutCtx = ABOUT_CONTEXT[Object.keys(ABOUT_CONTEXT).find(k => cat.label.toLowerCase().includes(k.split('/')[0].trim().toLowerCase()))] || 'brand with a clear point of view';
+  const shop = SHOP_CONTEXT[categoryKey] || SHOP_CONTEXT.fashion;
+  const aboutCtx = ABOUT_CONTEXT[categoryKey] || 'brand with a clear point of view';
 
   return `You are an expert web designer and frontend developer. Generate a complete, single-file HTML landing page for the following brand. Return ONLY the raw HTML — no markdown, no code fences, no explanation. All CSS in a <style> tag, all JS in a <script> tag.
 
@@ -116,7 +116,6 @@ ASSETS (use these exact URLs)
 Hero Image (16:9): ${heroUrl}
 Lifestyle Image (4:3): ${lifestyleUrl}
 Texture / Pattern (1:1): ${textureUrl}
-Background Music (MP3): ${musicUrl || ''}
 
 BRAND COLOR PALETTE
 -----------
@@ -127,7 +126,7 @@ Primary: ${colors[0]}   Accent: ${colors[1] || colors[0]}
 
 REQUIRED SECTIONS
 -----------
-1. NAV — sticky, brand name left, links: About, ${shop.noun}, Story, Contact. Add a 🔊 sound toggle button (top-right, compact icon button) that plays/pauses the background audio.
+1. NAV — sticky, brand name left, links: About, ${shop.noun}, Story, Contact. (A floating audio toggle will be injected separately — do NOT add audio elements yourself.)
 
 2. HERO — full-viewport, heroUrl as CSS background-image with gradient overlay for readability. Brand name as H1. A punchy one-line tagline that captures the ${vibe} aesthetic. Primary CTA button → #shop.
 
@@ -143,13 +142,6 @@ ${shop.items.map((item, i) => `   ${i + 1}. ${item}`).join('\n')}
 5. CTA — Full-width bold section. Headline that creates urgency. Email signup input + button. Use brand accent color as background.
 
 6. FOOTER — Brand name, nav links, social icons (Instagram, Twitter/X, TikTok as inline SVG), tagline, © ${new Date().getFullYear()} ${brand}.
-
-AUDIO
------------
-${musicUrl ? `- Add a hidden <audio id="bgAudio" src="${musicUrl}" loop> element
-- The 🔊 nav button toggles play/pause. Default: paused (autoplay is blocked by browsers)
-- When playing: button shows 🔊, when paused: shows 🔇
-- On first click: call audio.play() — handle the promise (some browsers need user gesture)` : '- No audio asset provided, skip the audio toggle'}
 
 TECHNICAL REQUIREMENTS
 -----------
@@ -208,6 +200,28 @@ app.post('/api/moodboard', async (req, res) => {
   }
 });
 
+function injectAudio(html, musicUrl) {
+  if (!musicUrl) return html;
+  const snippet = `
+<audio id="bgAudio" src="${musicUrl}" loop preload="none"></audio>
+<button id="audioToggle" aria-label="Toggle background music" style="position:fixed;bottom:24px;right:24px;z-index:9999;width:46px;height:46px;border-radius:50%;border:none;background:rgba(0,0,0,0.65);color:#fff;font-size:1.25rem;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.4);">🔇</button>
+<script>
+(function(){
+  var audio = document.getElementById('bgAudio');
+  var btn = document.getElementById('audioToggle');
+  btn.addEventListener('click', function(){
+    if (audio.paused) {
+      audio.play().then(function(){ btn.textContent = '🔊'; }).catch(function(){});
+    } else {
+      audio.pause();
+      btn.textContent = '🔇';
+    }
+  });
+})();
+</script>`;
+  return html.includes('</body>') ? html.replace('</body>', snippet + '\n</body>') : html + snippet;
+}
+
 app.post('/api/buildsite', async (req, res) => {
   const { category, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl } = req.body;
   const cat = CATEGORIES[category];
@@ -217,10 +231,10 @@ app.post('/api/buildsite', async (req, res) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 16000,
-      messages: [{ role: 'user', content: sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl }) }],
+      messages: [{ role: 'user', content: sitePrompt({ cat, categoryKey: category, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors }) }],
     });
 
-    const html = message.content[0].text;
+    const html = injectAudio(message.content[0].text, musicUrl);
     res.json({ html });
   } catch (err) {
     console.error(err);
