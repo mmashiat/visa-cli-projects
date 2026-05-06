@@ -73,49 +73,94 @@ function musicPrompt(cat, vibe) {
   return `Brand soundtrack, ${vibe} ${cat.label} business, ${cat.mood}, no lyrics, ambient background music, professional, loop-friendly`;
 }
 
-function sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors }) {
+const SHOP_CONTEXT = {
+  fashion:  { noun: 'Collection', items: ['Oversized Linen Shirt — $95', 'Tailored Wide-Leg Trouser — $135', 'Structured Blazer — $210', 'Slip Dress — $115', 'Merino Crew Knit — $145', 'Leather Tote — $265'] },
+  beauty:   { noun: 'Products', items: ['Barrier Repair Serum — $68', 'Cloud Moisturiser — $54', 'Gentle Enzyme Cleanser — $42', 'Peptide Eye Cream — $78', 'SPF 50 Fluid — $38', 'Overnight Mask — $62'] },
+  foodbev:  { noun: 'Menu', items: ['Signature Tasting Plate — $28', 'Chef\'s Daily Bowl — $18', 'Small Batch Cold Brew — $7', 'Weekend Brunch Set — $34', 'Seasonal Salad — $16', 'House-Made Pastry — $9'] },
+  techsaas: { noun: 'Plans', items: ['Starter — Free forever', 'Growth — $29/mo', 'Pro — $79/mo', 'Team — $149/mo', 'Business — $299/mo', 'Enterprise — Custom'] },
+  music:    { noun: 'Shop', items: ['Limited Edition Vinyl — $38', 'Tour Hoodie — $65', 'Signed Poster Print — $28', 'Backstage Pass Bundle — $120', 'Digital Album Download — $12', 'Exclusive Merch Box — $95'] },
+  crypto:   { noun: 'Products', items: ['Genesis Access Pass — 0.08 ETH', 'Premium NFT Drop — 0.25 ETH', 'DAO Membership — 500 tokens', 'Staking Tier 1 — 1000 tokens', 'Yield Vault Entry — 0.5 ETH', 'OG Whitelist Spot — Free mint'] },
+  fitness:  { noun: 'Plans', items: ['Drop-In Class — $22', '10-Class Pack — $180', 'Monthly Unlimited — $89/mo', 'Annual Membership — $799/yr', 'PT Session (60min) — $95', 'Online Programme — $49/mo'] },
+  creative: { noun: 'Services', items: ['Brand Identity — from $2,500', 'Website Design — from $4,000', 'Campaign Creative — from $3,500', 'Social Strategy — from $1,200/mo', 'Art Direction — from $1,800', 'Brand Sprint (5 days) — $5,000'] },
+};
+
+const ABOUT_CONTEXT = {
+  fashion:  'fashion label redefining how people dress with intention',
+  beauty:   'skincare and wellness brand built on science, simplicity, and self-care',
+  foodbev:  'food and beverage concept rooted in seasonal ingredients and honest craft',
+  techsaas: 'software platform helping teams move faster without the overhead',
+  music:    'music and entertainment project pushing the boundaries of sound and culture',
+  crypto:   'Web3 project building tools for the decentralised economy',
+  fitness:  'fitness and health studio helping people move better and feel stronger',
+  creative: 'creative agency turning bold ideas into work that moves people',
+};
+
+function sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl }) {
   const vibe = keywords.join(', ');
+  const brand = brandName || 'Our Brand';
   const colorVars = colors.map((c, i) => `  --color-${i + 1}: ${c};`).join('\n');
-  return `You are an expert web designer and frontend developer. Generate a complete, single-file HTML landing page for the following brand. Return ONLY the raw HTML — no markdown, no code fences, no explanation. The file must be self-contained with all CSS in a <style> tag and all JS in a <script> tag.
+  const shop = SHOP_CONTEXT[Object.keys(SHOP_CONTEXT).find(k => cat.label.toLowerCase().includes(k.split('/')[0].trim().toLowerCase())) ] || SHOP_CONTEXT.fashion;
+  const aboutCtx = ABOUT_CONTEXT[Object.keys(ABOUT_CONTEXT).find(k => cat.label.toLowerCase().includes(k.split('/')[0].trim().toLowerCase()))] || 'brand with a clear point of view';
+
+  return `You are an expert web designer and frontend developer. Generate a complete, single-file HTML landing page for the following brand. Return ONLY the raw HTML — no markdown, no code fences, no explanation. All CSS in a <style> tag, all JS in a <script> tag.
 
 BRAND BRIEF
 -----------
-Brand Name: ${brandName || 'Unnamed Brand'}
+Brand Name: ${brand}
 Category: ${cat.label}
 Aesthetic Keywords: ${vibe}
+About: ${brand} is a ${vibe.toLowerCase()} ${aboutCtx}. Founded with a clear vision, ${brand} exists to serve people who value craft, intention, and quality over noise. Every decision — from how we source to how we communicate — reflects this.
 
-ASSETS (use these exact URLs as src values)
+ASSETS (use these exact URLs)
 -----------
-Hero Image (16:9, full-width): ${heroUrl}
+Hero Image (16:9): ${heroUrl}
 Lifestyle Image (4:3): ${lifestyleUrl}
-Texture / Pattern Image (1:1): ${textureUrl}
+Texture / Pattern (1:1): ${textureUrl}
+Background Music (MP3): ${musicUrl || ''}
 
 BRAND COLOR PALETTE
 -----------
 :root {
 ${colorVars}
 }
-Primary: ${colors[0]}
-Accent: ${colors[1] || colors[0]}
+Primary: ${colors[0]}   Accent: ${colors[1] || colors[0]}
 
-REQUIRED SECTIONS (in this order)
+REQUIRED SECTIONS
 -----------
-1. NAV — sticky nav bar with brand name left, 3-4 nav links right
-2. HERO — full-viewport hero, heroUrl as background image with overlay, brand name as H1, punchy tagline, CTA button using accent color
-3. ABOUT — 2-3 sentence brand story matching the ${vibe} aesthetic, lifestyleUrl as side image
-4. FEATURES — 3 feature cards or product highlights relevant to ${cat.label}, textureUrl as subtle card accent
-5. CTA — bold call-to-action section, email input + button, contrasting background using brand colors
-6. FOOTER — brand name, nav links, social icon placeholders (SVG inline)
+1. NAV — sticky, brand name left, links: About, ${shop.noun}, Story, Contact. Add a 🔊 sound toggle button (top-right, compact icon button) that plays/pauses the background audio.
+
+2. HERO — full-viewport, heroUrl as CSS background-image with gradient overlay for readability. Brand name as H1. A punchy one-line tagline that captures the ${vibe} aesthetic. Primary CTA button → #shop.
+
+3. ABOUT — Two-column layout: lifestyleUrl on one side, text on the other. Write 3 paragraphs (4-5 sentences each) in the brand's voice:
+   - Para 1: Origin story of ${brand} — why it was founded, what gap it fills, the founding belief
+   - Para 2: How ${brand} approaches its craft/product/service differently — the ${vibe} philosophy in practice
+   - Para 3: The customer ${brand} is built for — who they are, what they value, why ${brand} belongs in their life
+
+4. SHOP (id="shop") — "${shop.noun}" section with a grid of exactly 6 items:
+${shop.items.map((item, i) => `   ${i + 1}. ${item}`).join('\n')}
+   Each item card: textureUrl as a subtle background accent, item name, price/tier, an "Add to Cart" or relevant CTA button. Cards should have hover effects.
+
+5. CTA — Full-width bold section. Headline that creates urgency. Email signup input + button. Use brand accent color as background.
+
+6. FOOTER — Brand name, nav links, social icons (Instagram, Twitter/X, TikTok as inline SVG), tagline, © ${new Date().getFullYear()} ${brand}.
+
+AUDIO
+-----------
+${musicUrl ? `- Add a hidden <audio id="bgAudio" src="${musicUrl}" loop> element
+- The 🔊 nav button toggles play/pause. Default: paused (autoplay is blocked by browsers)
+- When playing: button shows 🔊, when paused: shows 🔇
+- On first click: call audio.play() — handle the promise (some browsers need user gesture)` : '- No audio asset provided, skip the audio toggle'}
 
 TECHNICAL REQUIREMENTS
 -----------
-- Fully responsive, mobile-first, no external dependencies or CDN links
-- One Google Font via @import (single weight only)
-- CSS custom properties for all brand colors
-- Smooth scroll behavior
-- Fade-in on scroll using IntersectionObserver
-- All images: loading="lazy", descriptive alt text
-- The design must feel professionally crafted and match the ${vibe} aesthetic — in spacing, typography, color, and composition
+- Fully responsive, mobile-first, zero external dependencies (no CDN links except the one Google Font @import)
+- One Google Font @import that matches the ${vibe} aesthetic
+- CSS custom properties for all colors
+- smooth-scroll, IntersectionObserver fade-ins on scroll
+- Product/service cards: image accent, name, price, CTA button with hover state
+- Mobile nav hamburger menu
+- All images: loading="lazy", meaningful alt text
+- Design must feel like a real ${cat.label} brand site — not a template. Match the ${vibe} energy in every detail: font weight, spacing rhythm, color application, copy tone
 - Output starts with <!DOCTYPE html>`;
 }
 
@@ -156,7 +201,7 @@ app.post('/api/moodboard', async (req, res) => {
 });
 
 app.post('/api/buildsite', async (req, res) => {
-  const { category, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors } = req.body;
+  const { category, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl } = req.body;
   const cat = CATEGORIES[category];
   if (!cat) return res.status(400).json({ error: 'Invalid category' });
 
@@ -164,7 +209,7 @@ app.post('/api/buildsite', async (req, res) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8192,
-      messages: [{ role: 'user', content: sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors }) }],
+      messages: [{ role: 'user', content: sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl }) }],
     });
 
     const html = message.content[0].text;
