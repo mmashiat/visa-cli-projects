@@ -28,7 +28,23 @@ Generates a 3D model from a text description using a two-step workflow:
 
 **Output:** Source image URL + downloadable `.glb` file (open in Blender, Three.js, or [gltf.report](https://gltf.report))
 
+## Apps
+
+### `lootbox/` — AI Loot Box
+
+A web app where you pick a category and get a surprise AI-generated bundle: scene image + soundtrack + 3D model — all powered by Visa CLI micropayments (~$0.26/box).
+
+**Categories:** Space, Fantasy, Ocean, Cyberpunk, Nature, Ancient World, Dark Horror, Anime
+
+```bash
+cd lootbox
+npm install
+node server.js
+# Open http://localhost:3000
+```
+
 ## Requirements
 
 - [Claude Code](https://claude.ai/code)
 - [Visa CLI](https://auth.visacli.sh) account with a linked card
+- Node.js 18+ (for the lootbox app)

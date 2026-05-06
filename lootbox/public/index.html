@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Loot Box — Visa CLI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0f;
+      color: #f0f0f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    /* Category Grid */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      max-width: 720px;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+
+    .cat-card {
+      background: #13131f;
+      border: 2px solid #1e1e2e;
+      border-radius: 14px;
+      padding: 20px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .cat-card:hover { border-color: #a78bfa; transform: translateY(-2px); }
+    .cat-card.selected {
+      border-color: #a78bfa;
+      background: #1a1030;
+      box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+    }
+
+    .cat-emoji { font-size: 2rem; margin-bottom: 8px; }
+    .cat-name { font-size: 0.75rem; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Open Button */
+    #openBtn {
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      color: white;
+      border: none;
+      padding: 16px 48px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.03em;
+    }
+    #openBtn:hover:not(:disabled) { transform: scale(1.04); box-shadow: 0 0 30px rgba(124, 58, 237, 0.5); }
+    #openBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Loading */
+    #loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .box-anim {
+      font-size: 5rem;
+      animation: shake 0.5s infinite alternate;
+    }
+
+    @keyframes shake {
+      0% { transform: rotate(-8deg) scale(1); }
+      100% { transform: rotate(8deg) scale(1.1); }
+    }
+
+    .loading-text { color: #888; font-size: 0.9rem; }
+
+    .progress-steps { display: flex; flex-direction: column; gap: 8px; width: 280px; }
+    .step { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: #555; transition: color 0.3s; }
+    .step.active { color: #a78bfa; }
+    .step.done { color: #34d399; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+    /* Reveal */
+    #reveal {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      max-width: 720px;
+      width: 100%;
+      margin-top: 40px;
+    }
+
+    .reveal-header {
+      text-align: center;
+      animation: fadeSlideUp 0.6s ease;
+    }
+
+    .reveal-header .theme-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .reveal-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .reveal-card {
+      background: #13131f;
+      border: 1px solid #1e1e2e;
+      border-radius: 20px;
+      overflow: hidden;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal-card.visible { opacity: 1; transform: translateY(0); }
+
+    .card-label {
+      padding: 14px 20px 0;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      font-weight: 700;
+    }
+
+    .reveal-card img {
+      width: 100%;
+      display: block;
+      border-radius: 0;
+    }
+
+    .music-player {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .music-player audio { width: 100%; }
+
+    .model-section {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .model-preview { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; }
+
+    .model-info { flex: 1; }
+    .model-info p { color: #888; font-size: 0.85rem; margin-top: 4px; }
+
+    .dl-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .dl-btn:hover { opacity: 0.85; }
+
+    .cost-badge {
+      background: #13131f;
+      border: 1px solid #1e1e2e;
+      border-radius: 50px;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+      color: #666;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .cost-badge.visible { opacity: 1; }
+    .cost-badge span { color: #34d399; font-weight: 700; }
+
+    #tryAgain {
+      background: transparent;
+      color: #a78bfa;
+      border: 2px solid #a78bfa;
+      padding: 12px 32px;
+      border-radius: 50px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0;
+      transition: opacity 0.5s ease, background 0.2s, color 0.2s;
+    }
+    #tryAgain.visible { opacity: 1; }
+    #tryAgain:hover { background: #a78bfa; color: #0a0a0f; }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .category-grid { grid-template-columns: repeat(2, 1fr); }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎁 AI Loot Box</h1>
+  <p class="subtitle">Powered by Visa CLI · Pick a category and open your box</p>
+
+  <div class="category-grid" id="categoryGrid">
+    <div class="cat-card" data-id="space"><div class="cat-emoji">🌌</div><div class="cat-name">Space / Sci-Fi</div></div>
+    <div class="cat-card" data-id="fantasy"><div class="cat-emoji">🐉</div><div class="cat-name">Fantasy</div></div>
+    <div class="cat-card" data-id="ocean"><div class="cat-emoji">🌊</div><div class="cat-name">Deep Ocean</div></div>
+    <div class="cat-card" data-id="cyberpunk"><div class="cat-emoji">🏙️</div><div class="cat-name">Cyberpunk</div></div>
+    <div class="cat-card" data-id="nature"><div class="cat-emoji">🌿</div><div class="cat-name">Nature</div></div>
+    <div class="cat-card" data-id="ancient"><div class="cat-emoji">🏛️</div><div class="cat-name">Ancient World</div></div>
+    <div class="cat-card" data-id="horror"><div class="cat-emoji">🎭</div><div class="cat-name">Dark Horror</div></div>
+    <div class="cat-card" data-id="anime"><div class="cat-emoji">🌸</div><div class="cat-name">Anime / Japanese</div></div>
+  </div>
+
+  <button id="openBtn" disabled>Choose a Category</button>
+
+  <div id="loading">
+    <div class="box-anim">📦</div>
+    <div class="progress-steps">
+      <div class="step" id="s1"><div class="step-dot"></div> Generating scene image…</div>
+      <div class="step" id="s2"><div class="step-dot"></div> Composing soundtrack…</div>
+      <div class="step" id="s3"><div class="step-dot"></div> Rendering 3D model…</div>
+    </div>
+  </div>
+
+  <div id="reveal">
+    <div class="reveal-header">
+      <div class="theme-label" id="categoryLabel"></div>
+      <h2 id="themeName"></h2>
+    </div>
+
+    <div class="reveal-card" id="imageCard">
+      <div class="card-label">🖼️ Scene</div>
+      <img id="sceneImg" src="" alt="Generated scene" />
+    </div>
+
+    <div class="reveal-card" id="musicCard">
+      <div class="card-label">🎵 Soundtrack</div>
+      <div class="music-player">
+        <audio id="musicPlayer" controls></audio>
+      </div>
+    </div>
+
+    <div class="reveal-card" id="modelCard">
+      <div class="card-label">🧊 3D Model</div>
+      <div class="model-section">
+        <img class="model-preview" id="modelPreview" src="" alt="3D preview" />
+        <div class="model-info">
+          <strong id="modelName"></strong>
+          <p>GLB file · Open in Blender, Three.js, or <a href="https://gltf.report" target="_blank" style="color:#a78bfa">gltf.report</a></p>
+        </div>
+        <a class="dl-btn" id="modelDl" href="#" target="_blank">Download GLB</a>
+      </div>
+    </div>
+
+    <div class="cost-badge" id="costBadge">Total cost: <span>$0.26</span></div>
+    <button id="tryAgain">Open Another Box</button>
+  </div>
+
+  <script>
+    let selected = null;
+
+    document.querySelectorAll('.cat-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selected = card.dataset.id;
+        const btn = document.getElementById('openBtn');
+        btn.disabled = false;
+        btn.textContent = '🎁 Open Loot Box';
+      });
+    });
+
+    document.getElementById('openBtn').addEventListener('click', openBox);
+    document.getElementById('tryAgain').addEventListener('click', reset);
+
+    function setStep(n, state) {
+      const el = document.getElementById('s' + n);
+      el.classList.remove('active', 'done');
+      if (state) el.classList.add(state);
+    }
+
+    async function openBox() {
+      if (!selected) return;
+
+      document.getElementById('categoryGrid').style.display = 'none';
+      document.getElementById('openBtn').style.display = 'none';
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('reveal').style.display = 'none';
+
+      setStep(1, 'active'); setStep(2, ''); setStep(3, '');
+
+      try {
+        const res = await fetch('/api/lootbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: selected }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+        setStep(1, 'done'); setStep(2, 'active');
+        await delay(500);
+        setStep(2, 'done'); setStep(3, 'active');
+        await delay(500);
+        setStep(3, 'done');
+        await delay(400);
+
+        showReveal(data);
+      } catch (err) {
+        alert('Error: ' + err.message);
+        reset();
+      }
+    }
+
+    async function showReveal(data) {
+      document.getElementById('loading').style.display = 'none';
+
+      document.getElementById('categoryLabel').textContent = data.category;
+      document.getElementById('themeName').textContent = data.emoji + ' ' + data.theme;
+      document.getElementById('sceneImg').src = data.imageUrl;
+      document.getElementById('musicPlayer').src = data.musicUrl;
+      document.getElementById('modelPreview').src = data.objImageUrl;
+      document.getElementById('modelName').textContent = data.theme + ' 3D Model';
+      document.getElementById('modelDl').href = data.modelUrl;
+
+      const revealEl = document.getElementById('reveal');
+      revealEl.style.display = 'flex';
+
+      await delay(100);
+      document.getElementById('imageCard').classList.add('visible');
+      await delay(400);
+      document.getElementById('musicCard').classList.add('visible');
+      await delay(400);
+      document.getElementById('modelCard').classList.add('visible');
+      await delay(400);
+      document.getElementById('costBadge').classList.add('visible');
+      await delay(200);
+      document.getElementById('tryAgain').classList.add('visible');
+    }
+
+    function reset() {
+      selected = null;
+      ['imageCard', 'musicCard', 'modelCard'].forEach(id => {
+        document.getElementById(id).classList.remove('visible');
+      });
+      document.getElementById('costBadge').classList.remove('visible');
+      document.getElementById('tryAgain').classList.remove('visible');
+      document.getElementById('reveal').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+      const btn = document.getElementById('openBtn');
+      btn.disabled = true;
+      btn.textContent = 'Choose a Category';
+      btn.style.display = '';
+      document.getElementById('categoryGrid').style.display = '';
+    }
+
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+  </script>
+</body>
+</html>
