@@ -160,7 +160,15 @@ TECHNICAL REQUIREMENTS
 - Product/service cards: image accent, name, price, CTA button with hover state
 - Mobile nav hamburger menu
 - All images: loading="lazy", meaningful alt text
-- Design must feel like a real ${cat.label} brand site — not a template. Match the ${vibe} energy in every detail: font weight, spacing rhythm, color application, copy tone
+- Design must feel like a real ${cat.label} brand site — not a template. Match the ${vibe} energy in every detail
+
+CSS EFFICIENCY (critical — output has a token budget)
+-----------
+- Write compact, non-repetitive CSS. Use shorthand properties wherever possible.
+- Use CSS custom properties and shared class names to avoid duplicating rules.
+- Do NOT write long comments in the CSS. Keep selectors concise.
+- The HTML body with all 6 sections MUST be complete. If CSS runs long, cut comments — never cut HTML sections.
+- Every section (nav, hero, about, shop, cta, footer) and the audio element MUST appear in the final output.
 - Output starts with <!DOCTYPE html>`;
 }
 
@@ -208,7 +216,7 @@ app.post('/api/buildsite', async (req, res) => {
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
+      max_tokens: 16000,
       messages: [{ role: 'user', content: sitePrompt({ cat, keywords, brandName, heroUrl, lifestyleUrl, textureUrl, colors, musicUrl }) }],
     });
 
